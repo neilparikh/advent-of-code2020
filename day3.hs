@@ -1,7 +1,20 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE MultiWayIf #-}
 
-import Control.Monad.Reader
+newtype Reader s a = Reader { runReader :: s -> a }
+
+instance Functor (Reader s) where
+  fmap f r = Reader $ \s -> f (runReader r s)
+
+instance Applicative (Reader s) where
+  pure x = Reader $ const x
+  Reader f <*> Reader b = Reader $ \s -> f s (b s)
+
+instance Monad (Reader s) where
+  Reader a >>= f = Reader $ \s -> runReader (f (a s)) s
+
+ask :: Reader a a
+ask = Reader id
 
 main :: IO ()
 main = do
