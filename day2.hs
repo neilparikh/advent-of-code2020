@@ -1,7 +1,9 @@
 {-# OPTIONS_GHC -Wall #-}
-import Text.Parsec hiding (count)
+import Text.Parsec
 import Data.Either (isRight, rights)
 import Control.Monad (unless)
+
+import Parser
 
 main :: IO ()
 main = do
@@ -22,14 +24,9 @@ isValid2 (Policy i j c, password) = (password !! (i - 1) == c) `xor` (password !
   xor a b = (a && not b) || (b && not a)
 
 isValid1 :: (Policy, String) -> Bool
-isValid1 (Policy lowerBound upperBound c, password) = count >= lowerBound && count <= upperBound
+isValid1 (Policy lowerBound upperBound c, password) = n >= lowerBound && n <= upperBound
   where
-  count = length . filter (== c) $ password
-
-type Parser a = Parsec String () a
-
-applyParser :: Parser a -> String -> Either ParseError a
-applyParser parser = runParser parser () ""
+  n = length . filter (== c) $ password
 
 entryParser :: Parser (Policy, String)
 entryParser = do
