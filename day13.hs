@@ -23,6 +23,7 @@ solve2 (a1, n1) (a2, n2) = let (m1, m2) = egcd n1 n2
                                a' = (a1 * m2 * n2 + a2 * m1 * n1) `mod` n'
                            in (a', n')
 
+-- from https://gist.github.com/trevordixon/6895802
 egcd :: Integer -> Integer -> (Integer, Integer)
 egcd _ 0 = (1, 0)
 egcd a b = (t, s - q * t)
