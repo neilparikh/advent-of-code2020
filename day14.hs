@@ -3,7 +3,7 @@ import Text.Parsec
 import Data.Either (isRight, rights)
 import Control.Monad (unless)
 import qualified Data.IntMap.Strict as IM
-import Data.Bits ((.&.), (.|.), setBit)
+import Data.Bits ((.&.), (.|.), setBit, clearBit)
 import Data.List (foldl')
 
 import Parser
@@ -28,16 +28,22 @@ main = do
 
 exec2 :: ProgramState -> Program -> ProgramState
 exec2 (PS _ m) (Mask mask') = PS mask' m
-exec2 (PS mask m) (Assign addr val) = PS mask m
+exec2 (PS mask m) (Assign addr val) = PS mask $ foldl' (\m' k -> IM.insert k val m') m (maskedAddrs mask addr 35)
+  where
+  maskedAddrs "" ans _ = [ans]
+  maskedAddrs ('0':xs) ans i = maskedAddrs xs ans (pred i)
+  maskedAddrs ('1':xs) ans i = maskedAddrs xs (setBit ans i) (pred i)
+  maskedAddrs ('X':xs) ans i = maskedAddrs xs (setBit ans i) (pred i) ++ maskedAddrs xs (clearBit ans i) (pred i)
+  maskedAddrs _ _ _ = error "bad mask"
 
 exec1 :: ProgramState -> Program -> ProgramState
 exec1 (PS _ m) (Mask mask') = PS mask' m
-exec1 (PS mask m) (Assign addr val) = PS mask $ IM.insert addr (computeMask mask val) m
+exec1 (PS mask m) (Assign addr val) = PS mask $ IM.insert addr maskedVal m
   where
   -- 0 mask = X -> 1
   -- 1 mask = X -> 0
   -- ans = (x & 0 mask) | 1 mask
-  computeMask mask x = (x .|. oneMask mask 35) .&. zeroMask mask 35
+  maskedVal = (val .|. oneMask mask 35) .&. zeroMask mask 35
   zeroMask "" _  = 0
   zeroMask ('X':xs) i = setBit (zeroMask xs (pred i)) i
   zeroMask ('1':xs) i = setBit (zeroMask xs (pred i)) i
