@@ -2,8 +2,9 @@
 import Text.Parsec
 import Data.Either (isRight, rights)
 import Data.Maybe (fromJust)
-import Control.Monad (unless, join)
+import Control.Monad (unless, join, void)
 import qualified Data.IntMap as IM
+
 import Text.Regex.PCRE
 
 import Parser
@@ -22,12 +23,26 @@ main = do
   let regex = "^" ++ compile finalRule ++ "$"
   print . length . filter (=~ regex) $ input
   -- part 2
+  let parserMap = fmap (toParser . deRef rules) rules
+  let parser0p1 = fromJust (IM.lookup 0 parserMap) -- part1 again with parser approach
+  print . length . rights . fmap (applyParser $ parser0p1 >> eofParser) $ input
   return ()
+
+eofParser :: Parser ()
+eofParser = do
+  xs <- many anyChar
+  if null xs then return () else fail "leftover"
+
+toParser :: Rule -> Parser ()
+toParser (Lit x) = void $ string x
+toParser (Or a b) = try (toParser a) <|> toParser b
+toParser (Seq xs) = sequence_ (fmap toParser xs)
+toParser (Ref _) = error "should not happen"
 
 compile :: Rule -> String
 compile (Seq xs) = join $ fmap compile xs
 compile (Lit x) = x
-compile (Or a b) = "((" ++ compile a ++ ")|(" ++ compile b ++ "))"
+compile (Or a b) = "(" ++ compile a ++ "|" ++ compile b ++ ")"
 compile (Ref _) = error "should not happen"
 
 deRef :: IM.IntMap Rule -> Rule -> Rule
