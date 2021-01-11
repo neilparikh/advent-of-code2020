@@ -23,21 +23,27 @@ main = do
   let regex = "^" ++ compile finalRule ++ "$"
   print . length . filter (=~ regex) $ input
   -- part 2
-  let parserMap = fmap (toParser . deRef rules) rules
+  let parserMap = convert rules
   let parser0p1 = fromJust (IM.lookup 0 parserMap) -- part1 again with parser approach
-  print . length . rights . fmap (applyParser $ parser0p1 >> eofParser) $ input
+  print . length . rights . fmap (applyParser $ parser0p1 >> eof) $ input
+  let rule8 = Or (Ref 42) (Seq [Ref 42, Ref 8])
+  let rule11 = Or (Seq [Ref 42, Ref 31]) (Seq [Ref 42, Ref 11, Ref 31])
+  let rules2 = IM.insert 8 rule8 $ IM.insert 11 rule11 rules
+  printUtil . IM.toList $ rules2
+  let parserMap' = convert rules2
+  let parser0p2 = parserMap' IM.! 0
+  print . length . rights . fmap (applyParser $ parser0p2 >> eof) $ input
   return ()
 
-eofParser :: Parser ()
-eofParser = do
-  xs <- many anyChar
-  if null xs then return () else fail "leftover"
-
-toParser :: Rule -> Parser ()
-toParser (Lit x) = void $ string x
-toParser (Or a b) = try (toParser a) <|> toParser b
-toParser (Seq xs) = sequence_ (fmap toParser xs)
-toParser (Ref _) = error "should not happen"
+convert :: IM.IntMap Rule -> IM.IntMap (Parser ())
+convert rules = parsers
+  where
+  parsers = fmap toParser rules
+  toParser :: Rule -> Parser ()
+  toParser (Lit x) = void $ string x
+  toParser (Or a b) = try (toParser a) <|> toParser b
+  toParser (Seq xs) = sequence_ (fmap toParser xs)
+  toParser (Ref i) = parsers IM.! i
 
 compile :: Rule -> String
 compile (Seq xs) = join $ fmap compile xs
